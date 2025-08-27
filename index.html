@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Màu Sơn APE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .spinner { border-top-color: #3b82f6; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #a8a8a8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        /* Custom select arrow */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.7rem center;
+            background-size: 1.2em;
+            padding-right: 2.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- OVERLAYS -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-70 z-50 flex items-center justify-center hidden">
+        <div class="spinner w-16 h-16 border-4 border-gray-200 rounded-full"></div>
+    </div>
+
+    <div id="toast" class="fixed top-5 right-5 bg-green-600 text-white py-2 px-5 rounded-lg shadow-md transform translate-x-[120%] transition-transform duration-500 ease-in-out z-50">
+        <p id="toast-message">Thao tác thành công!</p>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-800 p-4">
+        <div class="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 fade-in">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">Hệ Thống Màu Sơn APE</h1>
+                <p class="text-gray-500 mt-2">Đăng nhập để tiếp tục</p>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <input type="email" id="login-email" class="w-full px-4 py-3 bg-gray-100 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors" placeholder="Email" required>
+                <input type="password" id="login-password" class="w-full px-4 py-3 bg-gray-100 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors" placeholder="Mật khẩu" required>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg mt-4 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-transform transform hover:scale-105">
+                    Đăng Nhập
+                </button>
+                <p id="login-error" class="text-red-500 text-center pt-2 text-sm hidden"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="hidden w-full max-w-7xl mx-auto bg-gray-100">
+        <header class="bg-white shadow-md sticky top-0 z-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+                <h1 class="text-xl font-bold text-gray-800">APE Color System</h1>
+                <div class="flex items-center space-x-4">
+                    <button id="user-management-btn" class="hidden bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 text-sm">Quản lý User</button>
+                    <span id="user-email-display" class="text-sm text-gray-600 hidden sm:block"></span>
+                    <button id="logout-button" title="Đăng xuất" class="text-gray-500 hover:text-red-500 transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <main id="main-content" class="p-4 sm:p-6 lg:p-8">
+            <!-- Formula Search View -->
+            <div id="search-view">
+                <div class="bg-white p-5 rounded-xl shadow-md mb-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label for="filter-brand" class="block text-sm font-medium text-gray-700 mb-1">Hãng Xe</label>
+                            <select id="filter-brand" class="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Tất cả hãng xe</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filter-model" class="block text-sm font-medium text-gray-700 mb-1">Dòng Xe</label>
+                            <select id="filter-model" class="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Tất cả dòng xe</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filter-year" class="block text-sm font-medium text-gray-700 mb-1">Năm</label>
+                            <select id="filter-year" class="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Tất cả năm</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filter-color-code" class="block text-sm font-medium text-gray-700 mb-1">Mã Màu</label>
+                            <select id="filter-color-code" class="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Tất cả mã màu</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div id="formula-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+                <div id="no-results" class="text-center py-16 hidden">
+                    <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <h3 class="mt-2 text-lg font-medium text-gray-900">Không tìm thấy công thức</h3>
+                    <p class="mt-1 text-sm text-gray-500">Hãy thử thay đổi bộ lọc hoặc thêm công thức mới.</p>
+                </div>
+            </div>
+
+            <!-- User Management View -->
+            <div id="user-management-view" class="hidden">
+                 <div class="bg-white p-6 rounded-xl shadow-md">
+                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <h2 class="font-bold text-2xl text-gray-800">Quản lý Người Dùng</h2>
+                        <div class="flex items-center gap-4">
+                            <button id="back-to-search-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Quay lại</button>
+                            <button id="add-user-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Thêm User</button>
+                        </div>
+                     </div>
+                     <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3">Email</th>
+                                    <th scope="col" class="px-6 py-3">Vai trò</th>
+                                    <th scope="col" class="px-6 py-3 text-right">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-list-table"></tbody>
+                        </table>
+                     </div>
+                 </div>
+            </div>
+
+            <button id="add-formula-btn" class="fixed bottom-6 right-6 bg-blue-600 text-white rounded-full p-4 shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+            </button>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <!-- Formula Form Modal -->
+    <div id="formula-form-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-30 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto fade-in">
+            <form id="formula-form" class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="formula-form-title" class="text-2xl font-bold text-gray-800">Thêm Công Thức</h2>
+                    <button type="button" class="close-modal-btn text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+                </div>
+                <div class="space-y-4">
+                    <input type="hidden" id="formula-id">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Hãng xe</label>
+                            <input type="text" id="brand" list="brand-list" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                            <datalist id="brand-list"></datalist>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Dòng xe</label>
+                            <input type="text" id="model" list="model-list" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                            <datalist id="model-list"></datalist>
+                        </div>
+                         <div>
+                            <label class="block text-sm font-medium text-gray-700">Năm</label>
+                            <input type="text" id="year" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="VD: 2022-2024">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Nước sản xuất</label>
+                            <input type="text" id="country" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="VD: Việt Nam">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Mã màu</label>
+                            <input type="text" id="color-code" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Tên màu</label>
+                            <input type="text" id="color-name" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700">Hệ sơn sử dụng</label>
+                        <input type="text" id="paint-system" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="VD: APE Premium, Kansai EZ...">
+                    </div>
+                    
+                    <!-- Dynamic Components Table -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Thành phần công thức</label>
+                        <div id="components-container" class="mt-2 space-y-2">
+                            <!-- Component rows will be added here -->
+                        </div>
+                        <button type="button" id="add-component-btn" class="mt-2 text-sm text-blue-600 font-semibold hover:text-blue-800">+ Thêm thành phần</button>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Ảnh màu thực tế</label>
+                        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                            <div class="space-y-1 text-center">
+                                <img id="image-preview" src="" class="max-h-40 mx-auto mb-4 rounded hidden" alt="Xem trước ảnh">
+                                <svg id="image-placeholder" class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                                <label for="image-upload" class="cursor-pointer font-medium text-blue-600 hover:text-blue-500"><span>Tải ảnh lên</span><input id="image-upload" type="file" class="sr-only" accept="image/*"></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-4 space-x-3">
+                        <button type="button" class="close-modal-btn bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-300">Hủy</button>
+                        <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Lưu</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="details-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-30 flex items-center justify-center p-4">
+         <div class="bg-white w-full max-w-4xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto fade-in">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800" id="details-title"></h2>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
+                            <span>Hệ sơn: <span class="font-semibold text-gray-700" id="details-paint-system"></span></span>
+                            <span>Năm: <span class="font-semibold text-gray-700" id="details-year"></span></span>
+                            <span>Nước SX: <span class="font-semibold text-gray-700" id="details-country"></span></span>
+                        </div>
+                    </div>
+                    <button class="close-modal-btn text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-800 mb-2">Công thức chi tiết</h3>
+                        <div class="overflow-x-auto border rounded-lg">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-gray-50 text-xs text-gray-700 uppercase">
+                                    <tr>
+                                        <th class="px-4 py-2">Mã màu gốc</th>
+                                        <th class="px-4 py-2">Tên màu gốc</th>
+                                        <th class="px-4 py-2 text-right">Khối lượng (g)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="details-components-table" class="bg-white">
+                                    <!-- Component rows here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-800 mb-2">Hình ảnh tham khảo</h3>
+                        <img id="details-image" src="" onerror="this.style.display='none'" class="w-full h-auto object-cover rounded-lg bg-gray-100" alt="Ảnh màu thực tế">
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-400 mt-4 text-right" id="details-metadata"></p>
+                <div id="details-actions" class="flex justify-end pt-6 space-x-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Form Modal -->
+    <div id="user-form-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-30 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl fade-in">
+            <form id="user-form" class="p-6 space-y-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 id="user-form-title" class="text-2xl font-bold text-gray-800">Thêm User</h2>
+                    <button type="button" class="close-modal-btn text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+                </div>
+                <input type="hidden" id="user-id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="user-email-input" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Mật khẩu</label>
+                    <input type="password" id="user-password-input" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="Để trống nếu không đổi">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Vai trò</label>
+                    <select id="user-role-select" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        <option value="staff">Staff</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="flex justify-end pt-4 space-x-3">
+                    <button type="button" class="close-modal-btn bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-300">Hủy</button>
+                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div id="confirm-delete-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-40 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl p-6 fade-in">
+            <h3 class="text-lg font-bold text-gray-900">Xác nhận xóa</h3>
+            <p class="mt-2 text-sm text-gray-600" id="confirm-delete-message">Bạn có chắc chắn muốn xóa mục này không? Hành động này không thể hoàn tác.</p>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button id="cancel-delete-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">Hủy</button>
+                <button id="confirm-delete-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Xóa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import functions from the Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            signInWithEmailAndPassword, 
+            signOut,
+            createUserWithEmailAndPassword,
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            onSnapshot, 
+            addDoc, 
+            doc, 
+            updateDoc, 
+            deleteDoc,
+            serverTimestamp,
+            getDoc,
+            setDoc,
+            writeBatch,
+            getDocs
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { 
+            getStorage, 
+            ref, 
+            uploadBytes, 
+            getDownloadURL,
+            deleteObject
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyBfCU6zmDk9il-hgsfixbXzIgorIz-iiDs",
+          authDomain: "pha-mau-son-apm.firebaseapp.com",
+          projectId: "pha-mau-son-apm",
+          storageBucket: "pha-mau-son-apm.appspot.com",
+          messagingSenderId: "705074828450",
+          appId: "1:705074828450:web:f93437c31db9a24ca733fb",
+          measurementId: "G-NBBMTHNJSL"
+        };
+        
+        // --- QUAN TRỌNG: CÀI ĐẶT QUY TẮC BẢO MẬT (SECURITY RULES) ---
+        /*
+        rules_version = '2';
+        service cloud.firestore {
+          match /databases/{database}/documents {
+            match /users/{userId} {
+              allow read: if request.auth != null && request.auth.uid == userId;
+              allow list, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+            }
+            match /formulas/{formulaId} {
+              allow read, create: if request.auth != null;
+              allow update, delete: if request.auth != null && (resource.data.createdBy == request.auth.token.email || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+            }
+          }
+        }
+        */
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        // --- DOM ELEMENT REFERENCES ---
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        const loginScreen = document.getElementById('login-screen');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const logoutButton = document.getElementById('logout-button');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const formulaList = document.getElementById('formula-list');
+        const noResults = document.getElementById('no-results');
+        const addFormulaBtn = document.getElementById('add-formula-btn');
+        
+        // Filters
+        const filterBrand = document.getElementById('filter-brand');
+        const filterModel = document.getElementById('filter-model');
+        const filterYear = document.getElementById('filter-year');
+        const filterColorCode = document.getElementById('filter-color-code');
+        
+        // Modals
+        const formulaFormModal = document.getElementById('formula-form-modal');
+        const formulaForm = document.getElementById('formula-form');
+        const formulaFormTitle = document.getElementById('formula-form-title');
+        const imagePreview = document.getElementById('image-preview');
+        const imagePlaceholder = document.getElementById('image-placeholder');
+        const imageUpload = document.getElementById('image-upload');
+        const componentsContainer = document.getElementById('components-container');
+        const addComponentBtn = document.getElementById('add-component-btn');
+
+        const detailsModal = document.getElementById('details-modal');
+        const detailsTitle = document.getElementById('details-title');
+        const detailsPaintSystem = document.getElementById('details-paint-system');
+        const detailsYear = document.getElementById('details-year');
+        const detailsCountry = document.getElementById('details-country');
+        const detailsImage = document.getElementById('details-image');
+        const detailsComponentsTable = document.getElementById('details-components-table');
+        const detailsMetadata = document.getElementById('details-metadata');
+        const detailsActions = document.getElementById('details-actions');
+
+        const confirmDeleteModal = document.getElementById('confirm-delete-modal');
+        const confirmDeleteMessage = document.getElementById('confirm-delete-message');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+
+        // User Management
+        const userManagementBtn = document.getElementById('user-management-btn');
+        const searchView = document.getElementById('search-view');
+        const userManagementView = document.getElementById('user-management-view');
+        const backToSearchBtn = document.getElementById('back-to-search-btn');
+        const addUserBtn = document.getElementById('add-user-btn');
+        const userListTable = document.getElementById('user-list-table');
+        const userFormModal = document.getElementById('user-form-modal');
+        const userForm = document.getElementById('user-form');
+        const userFormTitle = document.getElementById('user-form-title');
+
+        // --- GLOBAL STATE ---
+        let currentUser = null;
+        let currentUserRole = null;
+        let formulasUnsubscribe = null;
+        let usersUnsubscribe = null;
+        let allFormulas = [];
+        let currentFormulaId = null;
+        let currentUserId = null;
+        let deleteHandler = null;
+        let newImageFile = null;
+
+        // --- INITIAL DATABASE from files ---
+        const INITIAL_FORMULAS = [
+            // TOYOTA
+            { brand: "Toyota", model: "VIOS", year: "2024-2025", country: "", colorCode: "4R0", colorName: "Vàng Cát", paintSystem: "EZ", components: [ { code: "1842", name: "", weight: 6 }, { code: "1835", name: "", weight: 19 }, { code: "4554", name: "", weight: 0.9 }, { code: "7400", name: "", weight: 0.5 }, { code: "8565", name: "", weight: 0.8 }, { code: "5609", name: "", weight: 0.2 }, { code: "5643", name: "", weight: 0.1 }, { code: "0003", name: "", weight: 1.5 }, { code: "0089", name: "", weight: 2 }, { code: "5608", name: "", weight: 0.1 } ] },
+            // MITSUBISHI
+            { brand: "Mitsubishi", model: "Pajero sport", year: "2018", country: "Thái Lan", colorCode: "P17", colorName: "Medium Red Pearl", paintSystem: "EZ", components: [ { code: "5680", name: "", weight: 53.2 }, { code: "7400", name: "", weight: 7.4 }, { code: "5608", name: "", weight: 13.4 }, { code: "5609", name: "", weight: 2.1 }, { code: "248L", name: "", weight: 4.8 }, { code: "283L", name: "", weight: 4.4 }, { code: "0003", name: "", weight: 4 }, { code: "0002", name: "", weight: 13.4 } ] },
+            { brand: "Mitsubishi", model: "Xforce", year: "2024", country: "", colorCode: "Y37", colorName: "", paintSystem: "EZ", components: [ { code: "1850", name: "", weight: 8 }, { code: "8565", name: "", weight: 5 }, { code: "3607", name: "", weight: 0.8 }, { code: "0260", name: "", weight: 4.5 }, { code: "5643", name: "", weight: 0.1 } ] },
+            // WULING
+            { brand: "Wuling", model: "Wuling", year: "2023", country: "", colorCode: "TRẮNG PHẤN HỒNG", colorName: "Trắng phấn hồng", paintSystem: "EZ", components: [ { code: "6531", name: "", weight: 25 }, { code: "5637", name: "", weight: 0.6 }, { code: "7400", name: "", weight: 0.1 }, { code: "4361", name: "", weight: 0.3 } ] },
+            // VINFAST
+            { brand: "Vinfast", model: "VF3", year: "2024", country: "", colorCode: "VF3", colorName: "Vàng thịt", paintSystem: "EZ", components: [ { code: "8645", name: "", weight: 7.5 }, { code: "8629", name: "", weight: 22 }, { code: "8631", name: "", weight: 1.2 }, { code: "6531", name: "", weight: 3.2 }, { code: "4361", name: "", weight: 1.8 } ] },
+            { brand: "Vinfast", model: "VFe34", year: "2024", country: "", colorCode: "Xanh ngọc", colorName: "Xanh SM", paintSystem: "EZ", components: [ { code: "6531", name: "", weight: 114 }, { code: "2622", name: "", weight: 25.8 }, { code: "2621", name: "", weight: 25.8 }, { code: "0003", name: "", weight: 25.8 }, { code: "2619", name: "", weight: 2.6 } ] }
+        ];
+
+        // --- HELPER FUNCTIONS ---
+        const showLoading = () => loadingOverlay.classList.remove('hidden');
+        const hideLoading = () => loadingOverlay.classList.add('hidden');
+        
+        const showToast = (message, isError = false) => {
+            toastMessage.textContent = message;
+            toast.className = `fixed top-5 right-5 text-white py-2 px-5 rounded-lg shadow-md transform transition-transform duration-500 ease-in-out z-50 ${isError ? 'bg-red-600' : 'bg-green-600'}`;
+            toast.classList.remove('translate-x-[120%]');
+            setTimeout(() => toast.classList.add('translate-x-[120%]'), 3000);
+        };
+
+        const closeAllModals = () => {
+            document.querySelectorAll('.fixed.inset-0').forEach(modal => modal.classList.add('hidden'));
+        };
+
+        const formatDate = (timestamp) => {
+            if (!timestamp) return 'N/A';
+            return new Date(timestamp.seconds * 1000).toLocaleString('vi-VN');
+        };
+
+        // --- INITIALIZATION & DATA SEEDING ---
+        async function seedInitialData() {
+            const formulasCol = collection(db, "formulas");
+            const snapshot = await getDocs(formulasCol);
+            if (snapshot.empty) {
+                console.log("Database is empty. Seeding initial data...");
+                showLoading();
+                const batch = writeBatch(db);
+                INITIAL_FORMULAS.forEach(formula => {
+                    const docRef = doc(formulasCol);
+                    batch.set(docRef, {
+                        ...formula,
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp(),
+                        createdBy: "system@initial.com",
+                        lastUpdatedBy: "system@initial.com"
+                    });
+                });
+                await batch.commit();
+                showToast("Đã thêm dữ liệu mẫu thành công!");
+                hideLoading();
+            } else {
+                console.log("Database already contains data. Skipping seed.");
+            }
+        }
+
+        // --- AUTHENTICATION ---
+        async function handleLogout() {
+            await signOut(auth);
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                showLoading();
+                try {
+                    const userDocRef = doc(db, "users", user.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        currentUserRole = userDoc.data().role;
+                    } else {
+                        currentUserRole = 'staff'; 
+                        await setDoc(userDocRef, { email: user.email, role: 'staff' });
+                    }
+                    
+                    userEmailDisplay.textContent = user.email;
+                    if (currentUserRole === 'admin') {
+                        userManagementBtn.classList.remove('hidden');
+                    }
+                    
+                    loginScreen.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+                    
+                    await seedInitialData(); // Check and seed data after login
+                    listenToFormulas();
+                    if (currentUserRole === 'admin') listenToUsers();
+                } catch (error) {
+                    console.error("Error fetching user role:", error);
+                    showToast("Lỗi xác thực vai trò người dùng. Vui lòng kiểm tra lại Security Rules trên Firebase.", true);
+                    handleLogout();
+                } finally {
+                    hideLoading();
+                }
+            } else {
+                currentUser = null;
+                currentUserRole = null;
+                if (formulasUnsubscribe) formulasUnsubscribe();
+                if (usersUnsubscribe) usersUnsubscribe();
+                appContainer.classList.add('hidden');
+                loginScreen.classList.remove('hidden');
+                userManagementBtn.classList.add('hidden');
+                userManagementView.classList.add('hidden');
+                searchView.classList.remove('hidden');
+            }
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showLoading();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                loginError.classList.add('hidden');
+            } catch (error) {
+                loginError.textContent = "Email hoặc mật khẩu không đúng.";
+                loginError.classList.remove('hidden');
+            } finally {
+                hideLoading();
+            }
+        });
+
+        logoutButton.addEventListener('click', handleLogout);
+
+        // --- FILTER & RENDER ---
+        function populateFilters() {
+            const brands = [...new Set(allFormulas.map(f => f.brand))].sort();
+            const models = [...new Set(allFormulas.map(f => f.model))].sort();
+            const years = [...new Set(allFormulas.map(f => f.year))].sort((a,b) => b.localeCompare(a));
+            const colorCodes = [...new Set(allFormulas.map(f => f.colorCode))].sort();
+
+            filterBrand.innerHTML = '<option value="">Tất cả hãng xe</option>';
+            brands.forEach(b => filterBrand.innerHTML += `<option value="${b}">${b}</option>`);
+            
+            filterModel.innerHTML = '<option value="">Tất cả dòng xe</option>';
+            models.forEach(m => filterModel.innerHTML += `<option value="${m}">${m}</option>`);
+
+            filterYear.innerHTML = '<option value="">Tất cả năm</option>';
+            years.forEach(y => filterYear.innerHTML += `<option value="${y}">${y}</option>`);
+
+            filterColorCode.innerHTML = '<option value="">Tất cả mã màu</option>';
+            colorCodes.forEach(c => filterColorCode.innerHTML += `<option value="${c}">${c}</option>`);
+        }
+
+        function listenToFormulas() {
+            const formulasCol = collection(db, "formulas");
+            formulasUnsubscribe = onSnapshot(formulasCol, (snapshot) => {
+                allFormulas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                populateFilters();
+                renderFormulas();
+            }, (error) => {
+                console.error("Error listening to formulas:", error);
+                showToast("Không thể tải dữ liệu công thức.", true);
+            });
+        }
+
+        function renderFormulas() {
+            formulaList.innerHTML = '';
+            const filters = {
+                brand: filterBrand.value,
+                model: filterModel.value,
+                year: filterYear.value,
+                colorCode: filterColorCode.value
+            };
+
+            const filtered = allFormulas.filter(f => 
+                (!filters.brand || f.brand === filters.brand) &&
+                (!filters.model || f.model === filters.model) &&
+                (!filters.year || f.year === filters.year) &&
+                (!filters.colorCode || f.colorCode === filters.colorCode)
+            );
+
+            noResults.classList.toggle('hidden', filtered.length > 0);
+
+            filtered.sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0)).forEach(formula => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-md overflow-hidden cursor-pointer hover:shadow-xl transition-shadow duration-300 flex flex-col';
+                card.innerHTML = `
+                    <img class="h-40 w-full object-cover" src="${formula.imageUrl || 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image'}" alt="Màu sơn">
+                    <div class="p-4 flex-grow flex flex-col">
+                        <p class="text-sm font-semibold text-blue-600">${formula.brand} - ${formula.year}</p>
+                        <h3 class="font-bold text-lg text-gray-900 mt-1">${formula.model}</h3>
+                        <p class="text-gray-600 text-sm mt-1 flex-grow">${formula.colorCode} - ${formula.colorName}</p>
+                        <p class="text-xs text-gray-400 mt-2 text-right">Cập nhật: ${formatDate(formula.updatedAt)}</p>
+                    </div>
+                `;
+                card.addEventListener('click', () => showDetailsModal(formula.id));
+                formulaList.appendChild(card);
+            });
+        }
+
+        [filterBrand, filterModel, filterYear, filterColorCode].forEach(el => el.addEventListener('change', renderFormulas));
+        
+        // --- FORMULA MANAGEMENT (ADD/EDIT) ---
+        addFormulaBtn.addEventListener('click', () => showFormulaModal());
+
+        function addComponentRow(component = { code: '', name: '', weight: '' }) {
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-8 gap-2 items-center component-row';
+            row.innerHTML = `
+                <input type="text" value="${component.code}" placeholder="Mã" class="col-span-2 p-2 border rounded-md" data-field="code">
+                <input type="text" value="${component.name}" placeholder="Tên màu gốc" class="col-span-4 p-2 border rounded-md" data-field="name">
+                <input type="number" step="0.1" value="${component.weight}" placeholder="KL (g)" class="col-span-1 p-2 border rounded-md" data-field="weight">
+                <button type="button" class="col-span-1 text-red-500 hover:text-red-700 remove-component-btn">Xóa</button>
+            `;
+            componentsContainer.appendChild(row);
+        }
+
+        componentsContainer.addEventListener('click', e => {
+            if (e.target.classList.contains('remove-component-btn')) {
+                e.target.parentElement.remove();
+            }
+        });
+        
+        addComponentBtn.addEventListener('click', () => addComponentRow());
+
+        formulaForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showLoading();
+
+            let imageUrl = document.getElementById('image-preview').src;
+            if (newImageFile) {
+                const storageRef = ref(storage, `formulas/${Date.now()}_${newImageFile.name}`);
+                try {
+                    const snapshot = await uploadBytes(storageRef, newImageFile);
+                    imageUrl = await getDownloadURL(snapshot.ref);
+                } catch (error) {
+                    console.error("Image upload error:", error);
+                    showToast("Lỗi tải ảnh lên.", true);
+                    hideLoading();
+                    return;
+                }
+            }
+
+            const components = [];
+            document.querySelectorAll('.component-row').forEach(row => {
+                const code = row.querySelector('[data-field="code"]').value;
+                const name = row.querySelector('[data-field="name"]').value;
+                const weight = parseFloat(row.querySelector('[data-field="weight"]').value);
+                if (code && !isNaN(weight)) {
+                    components.push({ code, name, weight });
+                }
+            });
+
+            const formulaData = {
+                brand: document.getElementById('brand').value,
+                model: document.getElementById('model').value,
+                year: document.getElementById('year').value,
+                country: document.getElementById('country').value,
+                colorCode: document.getElementById('color-code').value,
+                colorName: document.getElementById('color-name').value,
+                paintSystem: document.getElementById('paint-system').value,
+                components: components,
+                imageUrl: imageUrl,
+                updatedAt: serverTimestamp(),
+                lastUpdatedBy: currentUser.email
+            };
+
+            try {
+                if (currentFormulaId) {
+                    const formulaRef = doc(db, "formulas", currentFormulaId);
+                    await updateDoc(formulaRef, formulaData);
+                    showToast("Cập nhật công thức thành công!");
+                } else {
+                    formulaData.createdAt = serverTimestamp();
+                    formulaData.createdBy = currentUser.email;
+                    await addDoc(collection(db, "formulas"), formulaData);
+                    showToast("Thêm công thức thành công!");
+                }
+                closeAllModals();
+            } catch (error) {
+                console.error("Error saving formula:", error);
+                showToast("Lỗi lưu công thức.", true);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        function showFormulaModal(id = null) {
+            formulaForm.reset();
+            imagePreview.classList.add('hidden');
+            imagePlaceholder.classList.remove('hidden');
+            componentsContainer.innerHTML = '';
+            newImageFile = null;
+            currentFormulaId = id;
+            
+            if (id) {
+                formulaFormTitle.textContent = "Chỉnh Sửa Công Thức";
+                const formula = allFormulas.find(f => f.id === id);
+                document.getElementById('brand').value = formula.brand;
+                document.getElementById('model').value = formula.model;
+                document.getElementById('year').value = formula.year;
+                document.getElementById('country').value = formula.country || '';
+                document.getElementById('color-code').value = formula.colorCode;
+                document.getElementById('color-name').value = formula.colorName;
+                document.getElementById('paint-system').value = formula.paintSystem;
+                
+                formula.components.forEach(c => addComponentRow(c));
+
+                if (formula.imageUrl) {
+                    imagePreview.src = formula.imageUrl;
+                    imagePreview.classList.remove('hidden');
+                    imagePlaceholder.classList.add('hidden');
+                }
+            } else {
+                formulaFormTitle.textContent = "Thêm Công Thức Mới";
+                addComponentRow(); // Add one empty row to start
+            }
+            formulaFormModal.classList.remove('hidden');
+        }
+
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                newImageFile = file;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    imagePreview.src = event.target.result;
+                    imagePreview.classList.remove('hidden');
+                    imagePlaceholder.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function showDetailsModal(id) {
+            const formula = allFormulas.find(f => f.id === id);
+            currentFormulaId = id;
+            detailsTitle.textContent = `${formula.brand} ${formula.model} - ${formula.colorName}`;
+            detailsPaintSystem.textContent = formula.paintSystem;
+            detailsYear.textContent = formula.year;
+            detailsCountry.textContent = formula.country || 'N/A';
+            detailsImage.src = formula.imageUrl || '';
+            detailsImage.style.display = formula.imageUrl ? 'block' : 'none';
+            
+            detailsComponentsTable.innerHTML = '';
+            if (formula.components && formula.components.length > 0) {
+                formula.components.forEach(c => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b';
+                    row.innerHTML = `
+                        <td class="px-4 py-2 font-medium text-gray-900">${c.code}</td>
+                        <td class="px-4 py-2">${c.name || 'N/A'}</td>
+                        <td class="px-4 py-2 text-right">${c.weight}</td>
+                    `;
+                    detailsComponentsTable.appendChild(row);
+                });
+            }
+
+            detailsMetadata.textContent = `Tạo bởi: ${formula.createdBy} lúc ${formatDate(formula.createdAt)}. Sửa lần cuối: ${formatDate(formula.updatedAt)} bởi ${formula.lastUpdatedBy || 'N/A'}`;
+
+            detailsActions.innerHTML = '';
+            if (currentUserRole === 'admin' || formula.createdBy === currentUser.email) {
+                const editBtn = document.createElement('button');
+                editBtn.className = 'bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700';
+                editBtn.textContent = 'Chỉnh sửa';
+                editBtn.onclick = () => { closeAllModals(); showFormulaModal(id); };
+                detailsActions.appendChild(editBtn);
+            }
+            if (currentUserRole === 'admin') {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700';
+                deleteBtn.textContent = 'Xóa';
+                deleteBtn.onclick = () => handleDeleteFormula(id);
+                detailsActions.appendChild(deleteBtn);
+            }
+            
+            detailsModal.classList.remove('hidden');
+        }
+
+        function handleDeleteFormula(id) {
+            confirmDeleteMessage.textContent = "Bạn có chắc chắn muốn xóa công thức này không? Hành động này không thể hoàn tác.";
+            confirmDeleteModal.classList.remove('hidden');
+            deleteHandler = async () => {
+                showLoading();
+                try {
+                    const formulaToDelete = allFormulas.find(f => f.id === id);
+                    if (formulaToDelete.imageUrl) {
+                        try {
+                            const imageRef = ref(storage, formulaToDelete.imageUrl);
+                            await deleteObject(imageRef);
+                        } catch (error) {
+                            console.warn("Could not delete image from storage:", error.code);
+                             if (error.code !== 'storage/object-not-found') throw error;
+                        }
+                    }
+                    await deleteDoc(doc(db, "formulas", id));
+                    showToast("Xóa công thức thành công!");
+                } catch (error) {
+                    console.error("Error deleting formula:", error);
+                    showToast("Lỗi xóa công thức.", true);
+                } finally {
+                    closeAllModals();
+                    hideLoading();
+                }
+            };
+        }
+
+        // --- USER MANAGEMENT ---
+        function listenToUsers() {
+            const usersCol = collection(db, "users");
+            usersUnsubscribe = onSnapshot(usersCol, (snapshot) => {
+                const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderUsers(users);
+            }, (error) => {
+                console.error("Error listening to users:", error);
+                showToast("Không thể tải danh sách người dùng.", true);
+            });
+        }
+
+        function renderUsers(users) {
+            userListTable.innerHTML = '';
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.className = 'bg-white border-b';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${user.email}</td>
+                    <td class="px-6 py-4">${user.role}</td>
+                    <td class="px-6 py-4 text-right">
+                        <button class="font-medium text-blue-600 hover:underline" data-id="${user.id}">Sửa</button>
+                    </td>
+                `;
+                if (user.id !== currentUser.uid) {
+                    tr.querySelector('td:last-child').innerHTML += ` | <button class="font-medium text-red-600 hover:underline" data-id="${user.id}" data-email="${user.email}">Xóa</button>`;
+                }
+                userListTable.appendChild(tr);
+            });
+        }
+        
+        userListTable.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                const id = e.target.dataset.id;
+                if (e.target.textContent === 'Sửa') {
+                    showUserModal(id);
+                } else if (e.target.textContent === 'Xóa') {
+                    handleDeleteUser(id, e.target.dataset.email);
+                }
+            }
+        });
+
+        function showUserModal(id = null) {
+            userForm.reset();
+            currentUserId = id;
+            document.getElementById('user-email-input').disabled = !!id;
+            document.getElementById('user-password-input').placeholder = id ? "Để trống nếu không đổi" : "Bắt buộc";
+            document.getElementById('user-password-input').required = !id;
+
+            if (id) {
+                userFormTitle.textContent = "Chỉnh Sửa User";
+                const userDocRef = doc(db, "users", id);
+                getDoc(userDocRef).then(userDoc => {
+                    if(userDoc.exists()){
+                        const user = userDoc.data();
+                        document.getElementById('user-email-input').value = user.email;
+                        document.getElementById('user-role-select').value = user.role;
+                    }
+                });
+            } else {
+                userFormTitle.textContent = "Thêm User";
+            }
+            userFormModal.classList.remove('hidden');
+        }
+
+        userForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showLoading();
+            const email = document.getElementById('user-email-input').value;
+            const password = document.getElementById('user-password-input').value;
+            const role = document.getElementById('user-role-select').value;
+            
+            try {
+                if (currentUserId) {
+                    const userRef = doc(db, "users", currentUserId);
+                    await updateDoc(userRef, { role });
+                    showToast("Cập nhật user thành công!");
+                } else {
+                    const tempApp = initializeApp(firebaseConfig, "tempAppForUserCreation");
+                    const tempAuth = getAuth(tempApp);
+                    const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
+                    await setDoc(doc(db, "users", userCredential.user.uid), { email, role });
+                    await signOut(tempAuth);
+                    showToast("Tạo user thành công!");
+                }
+                closeAllModals();
+            } catch (error) {
+                console.error("Error saving user:", error);
+                showToast(`Lỗi: ${error.message}`, true);
+            } finally {
+                hideLoading();
+            }
+        });
+        
+        function handleDeleteUser(id, email) {
+            confirmDeleteMessage.textContent = `Bạn có chắc muốn xóa user ${email}? Hành động này rất nguy hiểm và không thể hoàn tác.`;
+            confirmDeleteModal.classList.remove('hidden');
+            deleteHandler = async () => {
+                showLoading();
+                try {
+                    await deleteDoc(doc(db, "users", id));
+                    showToast("Đã xóa user khỏi Firestore. Lưu ý: tài khoản đăng nhập vẫn tồn tại.");
+                } catch (error) {
+                    console.error("Error deleting user doc:", error);
+                    showToast("Lỗi xóa user.", true);
+                } finally {
+                    closeAllModals();
+                    hideLoading();
+                }
+            };
+        }
+
+        // --- UI NAVIGATION & EVENT LISTENERS ---
+        userManagementBtn.addEventListener('click', () => {
+            searchView.classList.add('hidden');
+            userManagementView.classList.remove('hidden');
+        });
+        backToSearchBtn.addEventListener('click', () => {
+            userManagementView.classList.add('hidden');
+            searchView.classList.remove('hidden');
+        });
+        addUserBtn.addEventListener('click', () => showUserModal());
+
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', closeAllModals);
+        });
+
+        cancelDeleteBtn.addEventListener('click', closeAllModals);
+        confirmDeleteBtn.addEventListener('click', () => {
+            if (deleteHandler) deleteHandler();
+        });
+    </script>
+</body>
+</html>
