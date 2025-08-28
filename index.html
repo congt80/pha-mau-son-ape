@@ -80,11 +80,17 @@
             <!-- Formula Search View -->
             <div id="search-view">
                 <div class="bg-white p-5 rounded-xl shadow-md mb-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         <div>
                             <label for="filter-brand" class="block text-sm font-medium text-gray-700 mb-1">Hãng Xe</label>
                             <select id="filter-brand" class="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Tất cả hãng xe</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filter-paint-system" class="block text-sm font-medium text-gray-700 mb-1">Hệ Sơn</label>
+                            <select id="filter-paint-system" class="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Tất cả hệ sơn</option>
                             </select>
                         </div>
                         <div>
@@ -393,6 +399,7 @@
         
         // Filters
         const filterBrand = document.getElementById('filter-brand');
+        const filterPaintSystem = document.getElementById('filter-paint-system');
         const filterModel = document.getElementById('filter-model');
         const filterYear = document.getElementById('filter-year');
         const filterColorCode = document.getElementById('filter-color-code');
@@ -446,16 +453,11 @@
 
         // --- INITIAL DATABASE from files ---
         const INITIAL_FORMULAS = [
-            // TOYOTA
-            { brand: "Toyota", model: "VIOS", year: "2024-2025", country: "", colorCode: "4R0", colorName: "Vàng Cát", paintSystem: "EZ", components: [ { code: "1842", name: "", weight: 6 }, { code: "1835", name: "", weight: 19 }, { code: "4554", name: "", weight: 0.9 }, { code: "7400", name: "", weight: 0.5 }, { code: "8565", name: "", weight: 0.8 }, { code: "5609", name: "", weight: 0.2 }, { code: "5643", name: "", weight: 0.1 }, { code: "0003", name: "", weight: 1.5 }, { code: "0089", name: "", weight: 2 }, { code: "5608", name: "", weight: 0.1 } ] },
-            // MITSUBISHI
-            { brand: "Mitsubishi", model: "Pajero sport", year: "2018", country: "Thái Lan", colorCode: "P17", colorName: "Medium Red Pearl", paintSystem: "EZ", components: [ { code: "5680", name: "", weight: 53.2 }, { code: "7400", name: "", weight: 7.4 }, { code: "5608", name: "", weight: 13.4 }, { code: "5609", name: "", weight: 2.1 }, { code: "248L", name: "", weight: 4.8 }, { code: "283L", name: "", weight: 4.4 }, { code: "0003", name: "", weight: 4 }, { code: "0002", name: "", weight: 13.4 } ] },
-            { brand: "Mitsubishi", model: "Xforce", year: "2024", country: "", colorCode: "Y37", colorName: "", paintSystem: "EZ", components: [ { code: "1850", name: "", weight: 8 }, { code: "8565", name: "", weight: 5 }, { code: "3607", name: "", weight: 0.8 }, { code: "0260", name: "", weight: 4.5 }, { code: "5643", name: "", weight: 0.1 } ] },
-            // WULING
-            { brand: "Wuling", model: "Wuling", year: "2023", country: "", colorCode: "TRẮNG PHẤN HỒNG", colorName: "Trắng phấn hồng", paintSystem: "EZ", components: [ { code: "6531", name: "", weight: 25 }, { code: "5637", name: "", weight: 0.6 }, { code: "7400", name: "", weight: 0.1 }, { code: "4361", name: "", weight: 0.3 } ] },
-            // VINFAST
-            { brand: "Vinfast", model: "VF3", year: "2024", country: "", colorCode: "VF3", colorName: "Vàng thịt", paintSystem: "EZ", components: [ { code: "8645", name: "", weight: 7.5 }, { code: "8629", name: "", weight: 22 }, { code: "8631", name: "", weight: 1.2 }, { code: "6531", name: "", weight: 3.2 }, { code: "4361", name: "", weight: 1.8 } ] },
-            { brand: "Vinfast", model: "VFe34", year: "2024", country: "", colorCode: "Xanh ngọc", colorName: "Xanh SM", paintSystem: "EZ", components: [ { code: "6531", name: "", weight: 114 }, { code: "2622", name: "", weight: 25.8 }, { code: "2621", name: "", weight: 25.8 }, { code: "0003", name: "", weight: 25.8 }, { code: "2619", name: "", weight: 2.6 } ] }
+            { brand: "Toyota", paintSystem: "EZ", model: "VIOS", year: "2024-2025", country: "Malaysia", colorCode: "4R0", colorName: "Vàng Cát", components: [ { code: "A381-1842", name: "Màu bạc thưa", weight: 6 }, { code: "A381-1835", name: "Màu bạc chiếu trắng", weight: 19 }, { code: "A381-4554", name: "Màu nâu đậm", weight: 0.9 }, { code: "A381-7400", name: "Màu đen đậm", weight: 0.5 }, { code: "A381-8565", name: "Màu vàng sáng trong", weight: 0.8 }, { code: "A381-5609", name: "Màu đỏ nền tím xanh", weight: 0.2 }, { code: "A381-5643", name: "Màu đỏ tươi", weight: 0.1 }, { code: "A381-0003", name: "Phụ gia tạo nền sáng bạc", weight: 1.5 }, { code: "A381-0089", name: "Phụ gia trong", weight: 2 }, { code: "A381-5608", name: "Màu đỏ marong đậm nền xanh cỏ", weight: 0.1 } ] },
+            { brand: "Mitsubishi", paintSystem: "EZ", model: "Pajero sport", year: "2018", country: "Thái Lan", colorCode: "P17", colorName: "Medium Red Pearl", components: [ { code: "A381-5680", name: "Màu đỏ đậm", weight: 53.2 }, { code: "A381-7400", name: "Màu đen đậm", weight: 7.4 }, { code: "A381-5608", name: "Màu đỏ marong đậm nền xanh cỏ", weight: 13.4 }, { code: "A381-5609", name: "Màu đỏ nền tím xanh", weight: 2.1 }, { code: "A381-0248L", name: "Màu camay đỏ", weight: 4.8 }, { code: "A381-0283L", name: "Camay vàng chiếu sáng", weight: 4.4 }, { code: "A381-0003", name: "Phụ gia tạo nền sáng bạc", weight: 4 }, { code: "A381-0002", name: "Phụ gia chỉnh sáng mặt", weight: 13.4 } ] },
+            { brand: "Mitsubishi", paintSystem: "EZ", model: "Triton", year: "2022", country: "Thái Lan", colorCode: "W32", colorName: "Trắng Mica", components: [ { code: "A381-6531", name: "Màu trắng tinh", weight: 155 }, { code: "A381-7411", name: "Màu đen mờ", weight: 1.7 }, { code: "A381-4361", name: "Màu vàng lợt", weight: 0.4 }, { code: "A381-7582", name: "Màu đen nền", weight: 1.6 }, { code: "A381-5628", name: "Màu tím đậm", weight: 0.1 }, { code: "A381-2621", name: "Màu xanh dương nền ve", weight: 0.5 } ] },
+            { brand: "Wuling", paintSystem: "EZ", model: "Wuling", year: "2023", country: "Trung Quốc", colorCode: "TRẮNG PHẤN HỒNG", colorName: "Trắng phấn hồng", components: [ { code: "A381-6531", name: "Màu trắng tinh", weight: 25 }, { code: "A381-5637", name: "Màu đỏ nền cam hồng", weight: 0.6 }, { code: "A381-7400", name: "Màu đen đậm", weight: 0.1 }, { code: "A381-4361", name: "Màu vàng lợt", weight: 0.3 } ] },
+            { brand: "Vinfast", paintSystem: "EZ", model: "VF3", year: "2024", country: "Việt Nam", colorCode: "Hồng nhũ", colorName: "HỒNG NHŨ", components: [ { code: "A381-1843", name: "Màu bạc thưa nhuyễn", weight: 110.5 }, { code: "A381-5609", name: "Màu đỏ nền tím xanh", weight: 12.2 }, { code: "A381-5634", name: "Màu đỏ đậm nền cam", weight: 5.1 }, { code: "A381-0003", name: "Phụ gia tạo nền sáng bạc", weight: 17.6 }, { code: "A381-5680", name: "Màu đỏ đậm", weight: 3 }, { code: "A381-7400", name: "Màu đen đậm", weight: 0.9 }, { code: "A381-1832", name: "Màu bạc sáng mịn", weight: 17.5 } ] }
         ];
 
         // --- HELPER FUNCTIONS ---
@@ -474,7 +476,7 @@
         };
 
         const formatDate = (timestamp) => {
-            if (!timestamp) return 'N/A';
+            if (!timestamp || !timestamp.seconds) return 'N/A';
             return new Date(timestamp.seconds * 1000).toLocaleString('vi-VN');
         };
 
@@ -531,7 +533,7 @@
                     loginScreen.classList.add('hidden');
                     appContainer.classList.remove('hidden');
                     
-                    await seedInitialData(); // Check and seed data after login
+                    await seedInitialData(); 
                     listenToFormulas();
                     if (currentUserRole === 'admin') listenToUsers();
                 } catch (error) {
@@ -573,31 +575,41 @@
         logoutButton.addEventListener('click', handleLogout);
 
         // --- FILTER & RENDER ---
-        function populateFilters() {
-            const brands = [...new Set(allFormulas.map(f => f.brand))].sort();
-            const models = [...new Set(allFormulas.map(f => f.model))].sort();
-            const years = [...new Set(allFormulas.map(f => f.year))].sort((a,b) => b.localeCompare(a));
-            const colorCodes = [...new Set(allFormulas.map(f => f.colorCode))].sort();
+        function updateFilterOptions() {
+            const filters = [
+                { el: filterBrand, key: 'brand', default: 'Tất cả hãng xe' },
+                { el: filterPaintSystem, key: 'paintSystem', default: 'Tất cả hệ sơn' },
+                { el: filterModel, key: 'model', default: 'Tất cả dòng xe' },
+                { el: filterYear, key: 'year', default: 'Tất cả năm' },
+                { el: filterColorCode, key: 'colorCode', default: 'Tất cả mã màu' }
+            ];
 
-            filterBrand.innerHTML = '<option value="">Tất cả hãng xe</option>';
-            brands.forEach(b => filterBrand.innerHTML += `<option value="${b}">${b}</option>`);
-            
-            filterModel.innerHTML = '<option value="">Tất cả dòng xe</option>';
-            models.forEach(m => filterModel.innerHTML += `<option value="${m}">${m}</option>`);
+            let filteredData = [...allFormulas];
 
-            filterYear.innerHTML = '<option value="">Tất cả năm</option>';
-            years.forEach(y => filterYear.innerHTML += `<option value="${y}">${y}</option>`);
+            for (let i = 0; i < filters.length; i++) {
+                const currentFilter = filters[i];
+                const selectedValue = currentFilter.el.value;
+                
+                // Populate current filter's options
+                const options = [...new Set(filteredData.map(item => item[currentFilter.key]))].sort();
+                currentFilter.el.innerHTML = `<option value="">${currentFilter.default}</option>`;
+                options.forEach(opt => {
+                    currentFilter.el.innerHTML += `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt}</option>`;
+                });
 
-            filterColorCode.innerHTML = '<option value="">Tất cả mã màu</option>';
-            colorCodes.forEach(c => filterColorCode.innerHTML += `<option value="${c}">${c}</option>`);
+                // Filter data for the next dropdown
+                if (selectedValue) {
+                    filteredData = filteredData.filter(item => item[currentFilter.key] === selectedValue);
+                }
+            }
+            renderFormulas();
         }
 
         function listenToFormulas() {
             const formulasCol = collection(db, "formulas");
             formulasUnsubscribe = onSnapshot(formulasCol, (snapshot) => {
                 allFormulas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                populateFilters();
-                renderFormulas();
+                updateFilterOptions();
             }, (error) => {
                 console.error("Error listening to formulas:", error);
                 showToast("Không thể tải dữ liệu công thức.", true);
@@ -608,6 +620,7 @@
             formulaList.innerHTML = '';
             const filters = {
                 brand: filterBrand.value,
+                paintSystem: filterPaintSystem.value,
                 model: filterModel.value,
                 year: filterYear.value,
                 colorCode: filterColorCode.value
@@ -615,6 +628,7 @@
 
             const filtered = allFormulas.filter(f => 
                 (!filters.brand || f.brand === filters.brand) &&
+                (!filters.paintSystem || f.paintSystem === filters.paintSystem) &&
                 (!filters.model || f.model === filters.model) &&
                 (!filters.year || f.year === filters.year) &&
                 (!filters.colorCode || f.colorCode === filters.colorCode)
@@ -639,7 +653,7 @@
             });
         }
 
-        [filterBrand, filterModel, filterYear, filterColorCode].forEach(el => el.addEventListener('change', renderFormulas));
+        [filterBrand, filterPaintSystem, filterModel, filterYear, filterColorCode].forEach(el => el.addEventListener('change', updateFilterOptions));
         
         // --- FORMULA MANAGEMENT (ADD/EDIT) ---
         addFormulaBtn.addEventListener('click', () => showFormulaModal());
@@ -797,7 +811,7 @@
                 });
             }
 
-            detailsMetadata.textContent = `Tạo bởi: ${formula.createdBy} lúc ${formatDate(formula.createdAt)}. Sửa lần cuối: ${formatDate(formula.updatedAt)} bởi ${formula.lastUpdatedBy || 'N/A'}`;
+            detailsMetadata.textContent = `Tạo bởi: ${formula.createdBy || 'N/A'} lúc ${formatDate(formula.createdAt)}. Sửa lần cuối: ${formatDate(formula.updatedAt)} bởi ${formula.lastUpdatedBy || 'N/A'}`;
 
             detailsActions.innerHTML = '';
             if (currentUserRole === 'admin' || formula.createdBy === currentUser.email) {
