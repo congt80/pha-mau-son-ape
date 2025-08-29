@@ -319,6 +319,8 @@ function renderFormulas() {
     noResults.classList.toggle('hidden', filtered.length > 0);
 
     filtered.sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0)).forEach(formula => {
+        formula.imageUrl = 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
+
         const card = document.createElement('div');
         card.className = 'bg-white rounded-xl shadow-md overflow-hidden cursor-pointer hover:shadow-xl transition-shadow duration-300 flex flex-col';
         card.innerHTML = `
@@ -364,7 +366,8 @@ formulaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     showLoading();
 
-    let imageUrl = document.getElementById('image-preview').src;
+    // let imageUrl = document.getElementById('image-preview').src || 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
+    let imageUrl = 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
     if (newImageFile) {
         const storageRef = ref(storage, `formulas/${Date.now()}_${newImageFile.name}`);
         try {
@@ -397,7 +400,7 @@ formulaForm.addEventListener('submit', async (e) => {
         colorName: document.getElementById('color-name').value,
         paintSystem: document.getElementById('paint-system').value,
         components: components,
-        imageUrl: imageUrl,
+        imageUrl: imageUrl || 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image',
         updatedAt: serverTimestamp(),
         lastUpdatedBy: currentUser.email
     };
@@ -442,9 +445,8 @@ function showFormulaModal(id = null) {
         document.getElementById('paint-system').value = formula.paintSystem;
         
         formula.components.forEach(c => addComponentRow(c));
-
         if (formula.imageUrl) {
-            imagePreview.src = formula.imageUrl;
+            imagePreview.src = formula.imageUrl || 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
             imagePreview.classList.remove('hidden');
             imagePlaceholder.classList.add('hidden');
         }
@@ -455,19 +457,19 @@ function showFormulaModal(id = null) {
     formulaFormModal.classList.remove('hidden');
 }
 
-imageUpload.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        newImageFile = file;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            imagePreview.src = event.target.result;
-            imagePreview.classList.remove('hidden');
-            imagePlaceholder.classList.add('hidden');
-        };
-        reader.readAsDataURL(file);
-    }
-});
+// imageUpload.addEventListener('change', (e) => {
+//     const file = e.target.files[0];
+//     if (file) {
+//         newImageFile = file;
+//         const reader = new FileReader();
+//         reader.onload = (event) => {
+//             imagePreview.src = event.target.result;
+//             imagePreview.classList.remove('hidden');
+//             imagePlaceholder.classList.add('hidden');
+//         };
+//         reader.readAsDataURL(file);
+//     }
+// });
 
 function showDetailsModal(id) {
     const formula = allFormulas.find(f => f.id === id);
@@ -476,7 +478,7 @@ function showDetailsModal(id) {
     detailsPaintSystem.textContent = formula.paintSystem;
     detailsYear.textContent = formula.year;
     detailsCountry.textContent = formula.country || 'N/A';
-    detailsImage.src = formula.imageUrl || '';
+    detailsImage.src = formula.imageUrl || 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
     detailsImage.style.display = formula.imageUrl ? 'block' : 'none';
     
     detailsComponentsTable.innerHTML = '';
@@ -521,15 +523,15 @@ function handleDeleteFormula(id) {
         showLoading();
         try {
             const formulaToDelete = allFormulas.find(f => f.id === id);
-            if (formulaToDelete.imageUrl) {
-                try {
-                    const imageRef = ref(storage, formulaToDelete.imageUrl);
-                    await deleteObject(imageRef);
-                } catch (error) {
-                    console.warn("Could not delete image from storage:", error.code);
-                     if (error.code !== 'storage/object-not-found') throw error;
-                }
-            }
+            // if (formulaToDelete.imageUrl) {
+            //     try {
+            //         const imageRef = ref(storage, formulaToDelete.imageUrl);
+            //         await deleteObject(imageRef);
+            //     } catch (error) {
+            //         console.warn("Could not delete image from storage:", error.code);
+            //          if (error.code !== 'storage/object-not-found') throw error;
+            //     }
+            // }
             await deleteDoc(doc(db, "formulas", id));
             showToast("Xóa công thức thành công!");
         } catch (error) {
