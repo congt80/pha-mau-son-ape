@@ -217,7 +217,7 @@
                         <button type="button" id="add-component-btn" class="mt-2 text-sm text-blue-600 font-semibold hover:text-blue-800">+ Thêm thành phần</button>
                     </div>
 
-                    <div class="hidden">
+                    <div>
                         <label class="block text-sm font-medium text-gray-700">Ảnh màu thực tế</label>
                         <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                             <div class="space-y-1 text-center">
@@ -238,7 +238,7 @@
 
     <!-- Details Modal -->
     <div id="details-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-30 flex items-center justify-center p-4">
-         <div class="bg-white w-full max-w-4xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto fade-in">
+         <div class="bg-white w-full max-w-5xl rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto fade-in">
             <div class="p-6">
                 <div class="flex justify-between items-start mb-4">
                     <div>
@@ -252,9 +252,37 @@
                     <button class="close-modal-btn text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
                 </div>
                 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Original Formula Column -->
                     <div>
-                        <h3 class="font-bold text-lg text-gray-800 mb-2">Công thức chi tiết</h3>
+                        <h3 class="font-bold text-lg text-gray-800 mb-2">Công thức gốc</h3>
+                        <div class="overflow-x-auto border rounded-lg">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-gray-100 text-xs text-gray-700 uppercase">
+                                    <tr>
+                                        <th class="px-4 py-2">Mã màu gốc</th>
+                                        <th class="px-4 py-2">Tên màu gốc</th>
+                                        <th class="px-4 py-2 text-right">Khối lượng (g)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="details-original-components-table" class="bg-white"></tbody>
+                                <tfoot class="font-bold bg-gray-100">
+                                    <tr>
+                                        <td colspan="2" class="px-4 py-2 text-right">TỔNG GỐC</td>
+                                        <td id="details-original-total-mass" class="px-4 py-2 text-right"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Recalculated Formula Column -->
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-800 mb-2">Công thức tùy chỉnh</h3>
+                        <div class="flex items-center gap-2 mb-2">
+                            <label for="recalculate-mass" class="text-sm font-medium">Tổng khối lượng mới:</label>
+                            <input type="number" id="recalculate-mass" class="p-1 border rounded-md w-24" placeholder="100">
+                            <button id="recalculate-btn" class="bg-blue-500 text-white text-sm font-semibold px-3 py-1 rounded-md hover:bg-blue-600">Tính lại</button>
+                        </div>
                         <div class="overflow-x-auto border rounded-lg">
                             <table class="w-full text-sm text-left">
                                 <thead class="bg-gray-50 text-xs text-gray-700 uppercase">
@@ -264,16 +292,20 @@
                                         <th class="px-4 py-2 text-right">Khối lượng (g)</th>
                                     </tr>
                                 </thead>
-                                <tbody id="details-components-table" class="bg-white">
-                                    <!-- Component rows here -->
-                                </tbody>
+                                <tbody id="details-components-table" class="bg-white"></tbody>
+                                <tfoot class="font-bold bg-gray-50">
+                                    <tr>
+                                        <td colspan="2" class="px-4 py-2 text-right">TỔNG MỚI</td>
+                                        <td id="details-total-mass" class="px-4 py-2 text-right"></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
-                    <div class="hidden">
-                        <h3 class="font-bold text-lg text-gray-800 mb-2">Hình ảnh tham khảo</h3>
-                        <img id="details-image" src="" onerror="this.style.display='none'" class="w-full h-auto object-cover rounded-lg bg-gray-100" alt="Ảnh màu thực tế">
-                    </div>
+                </div>
+                 <div class="mt-6">
+                    <h3 class="font-bold text-lg text-gray-800 mb-2">Hình ảnh tham khảo</h3>
+                    <img id="details-image" src="" onerror="this.style.display='none'" class="max-w-sm h-auto object-cover rounded-lg bg-gray-100" alt="Ảnh màu thực tế">
                 </div>
 
                 <p class="text-xs text-gray-400 mt-4 text-right" id="details-metadata"></p>

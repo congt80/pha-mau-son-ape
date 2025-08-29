@@ -42,6 +42,7 @@ const firebaseConfig = {
 };
 
 // --- QUAN TRỌNG: CÀI ĐẶT QUY TẮC BẢO MẬT (SECURITY RULES) ---
+// 1. Firestore Database Rules:
 /*
 rules_version = '2';
 service cloud.firestore {
@@ -57,6 +58,24 @@ service cloud.firestore {
   }
 }
 */
+
+// 2. Storage Rules (ĐỂ SỬA LỖI TẢI ẢNH LÊN):
+// Anh cần truy cập vào dự án Firebase của mình:
+// 1. Vào mục "Storage"
+// 2. Chọn tab "Rules"
+// 3. Xóa nội dung cũ và dán toàn bộ nội dung dưới đây vào, sau đó nhấn "Publish".
+/*
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Cho phép người dùng đã đăng nhập đọc và ghi file
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+*/
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -101,7 +120,12 @@ const detailsPaintSystem = document.getElementById('details-paint-system');
 const detailsYear = document.getElementById('details-year');
 const detailsCountry = document.getElementById('details-country');
 const detailsImage = document.getElementById('details-image');
+const detailsOriginalComponentsTable = document.getElementById('details-original-components-table');
+const detailsOriginalTotalMass = document.getElementById('details-original-total-mass');
 const detailsComponentsTable = document.getElementById('details-components-table');
+const detailsTotalMass = document.getElementById('details-total-mass');
+const recalculateMassInput = document.getElementById('recalculate-mass');
+const recalculateBtn = document.getElementById('recalculate-btn');
 const detailsMetadata = document.getElementById('details-metadata');
 const detailsActions = document.getElementById('details-actions');
 
@@ -131,15 +155,25 @@ let currentFormulaId = null;
 let currentUserId = null;
 let deleteHandler = null;
 let newImageFile = null;
+let originalComponents = [];
+
+const PLACEHOLDER_IMG_URL = 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
+
+const DISABLE_UPLOAD = true;
 
 // --- INITIAL DATABASE from files ---
 const INITIAL_FORMULAS = [
-    { brand: "Toyota", paintSystem: "EZ", model: "VIOS", year: "2024-2025", country: "Malaysia", colorCode: "4R0", colorName: "Vàng Cát", components: [ { code: "A381-1842", name: "Màu bạc thưa", weight: 6 }, { code: "A381-1835", name: "Màu bạc chiếu trắng", weight: 19 }, { code: "A381-4554", name: "Màu nâu đậm", weight: 0.9 }, { code: "A381-7400", name: "Màu đen đậm", weight: 0.5 }, { code: "A381-8565", name: "Màu vàng sáng trong", weight: 0.8 }, { code: "A381-5609", name: "Màu đỏ nền tím xanh", weight: 0.2 }, { code: "A381-5643", name: "Màu đỏ tươi", weight: 0.1 }, { code: "A381-0003", name: "Phụ gia tạo nền sáng bạc", weight: 1.5 }, { code: "A381-0089", name: "Phụ gia trong", weight: 2 }, { code: "A381-5608", name: "Màu đỏ marong đậm nền xanh cỏ", weight: 0.1 } ] },
+    // VINFAST
+    { brand: "Vinfast", paintSystem: "EZ", model: "VF3", year: "2024", country: "Việt Nam", colorCode: "Hồng nhũ", colorName: "HỒNG NHŨ", components: [ { code: "A381-1843", name: "Màu bạc thưa nhuyễn", weight: 110.5 }, { code: "A381-5609", name: "Màu đỏ nền tím xanh", weight: 12.2 }, { code: "A381-5634", name: "Màu đỏ đậm nền cam", weight: 5.1 }, { code: "A381-0003", name: "Phụ gia tạo nền sáng bạc", weight: 17.6 }, { code: "A381-5680", name: "Màu đỏ đậm", weight: 3 }, { code: "A381-7400", name: "Màu đen đậm", weight: 0.9 }, { code: "A381-1832", name: "Màu bạc sáng mịn", weight: 17.5 } ] },
+    { brand: "Vinfast", paintSystem: "EZ", model: "VFe34", year: "2024", country: "Việt Nam", colorCode: "Xanh ngọc", colorName: "Xanh SM", components: [ { code: "A381-6531", name: "Màu trắng tinh", weight: 114 }, { code: "A381-2622", name: "Màu xanh dương nền đỏ", weight: 25.8 }, { code: "A381-2621", name: "Màu xanh dương nền ve", weight: 25.8 }, { code: "A381-0003", name: "Phụ gia tạo nền sáng bạc", weight: 25.8 }, { code: "A381-2619", name: "Màu xanh dương nền tím", weight: 2.6 } ] },
+    // WULING
+    { brand: "Wuling", paintSystem: "EZ", model: "Wuling", year: "2023", country: "Trung Quốc", colorCode: "TRẮNG PHẤN HỒNG", colorName: "Trắng phấn hồng", components: [ { code: "A381-6531", name: "Màu trắng tinh", weight: 25 }, { code: "A381-5637", name: "Màu đỏ nền cam hồng", weight: 0.6 }, { code: "A381-7400", name: "Màu đen đậm", weight: 0.1 }, { code: "A381-4361", name: "Màu vàng lợt", weight: 0.3 } ] },
+    { brand: "Wuling", paintSystem: "EV", model: "Wuling", year: "2023", country: "Trung Quốc", colorCode: "MÀU VÀNG", colorName: "Màu vàng", components: [ { code: "A381-4361", name: "Màu vàng lợt", weight: 6.8 }, { code: "A381-6531", name: "Màu trắng tinh", weight: 3 }, { code: "A381-8565", name: "Màu vàng sáng trong", weight: 13.9 } ] },
+    // MITSUBISHI
     { brand: "Mitsubishi", paintSystem: "EZ", model: "Pajero sport", year: "2018", country: "Thái Lan", colorCode: "P17", colorName: "Medium Red Pearl", components: [ { code: "A381-5680", name: "Màu đỏ đậm", weight: 53.2 }, { code: "A381-7400", name: "Màu đen đậm", weight: 7.4 }, { code: "A381-5608", name: "Màu đỏ marong đậm nền xanh cỏ", weight: 13.4 }, { code: "A381-5609", name: "Màu đỏ nền tím xanh", weight: 2.1 }, { code: "A381-0248L", name: "Màu camay đỏ", weight: 4.8 }, { code: "A381-0283L", name: "Camay vàng chiếu sáng", weight: 4.4 }, { code: "A381-0003", name: "Phụ gia tạo nền sáng bạc", weight: 4 }, { code: "A381-0002", name: "Phụ gia chỉnh sáng mặt", weight: 13.4 } ] },
     { brand: "Mitsubishi", paintSystem: "EZ", model: "Triton", year: "2022", country: "Thái Lan", colorCode: "W32", colorName: "Trắng Mica", components: [ { code: "A381-6531", name: "Màu trắng tinh", weight: 155 }, { code: "A381-7411", name: "Màu đen mờ", weight: 1.7 }, { code: "A381-4361", name: "Màu vàng lợt", weight: 0.4 }, { code: "A381-7582", name: "Màu đen nền", weight: 1.6 }, { code: "A381-5628", name: "Màu tím đậm", weight: 0.1 }, { code: "A381-2621", name: "Màu xanh dương nền ve", weight: 0.5 } ] },
-    { brand: "Wuling", paintSystem: "EZ", model: "Wuling", year: "2023", country: "Trung Quốc", colorCode: "TRẮNG PHẤN HỒNG", colorName: "Trắng phấn hồng", components: [ { code: "A381-6531", name: "Màu trắng tinh", weight: 25 }, { code: "A381-5637", name: "Màu đỏ nền cam hồng", weight: 0.6 }, { code: "A381-7400", name: "Màu đen đậm", weight: 0.1 }, { code: "A381-4361", name: "Màu vàng lợt", weight: 0.3 } ] },
-    { brand: "Vinfast", paintSystem: "EZ", model: "VF3", year: "2024", country: "Việt Nam", colorCode: "Hồng nhũ", colorName: "HỒNG NHŨ", components: [ { code: "A381-1843", name: "Màu bạc thưa nhuyễn", weight: 110.5 }, { code: "A381-5609", name: "Màu đỏ nền tím xanh", weight: 12.2 }, { code: "A381-5634", name: "Màu đỏ đậm nền cam", weight: 5.1 }, { code: "A381-0003", name: "Phụ gia tạo nền sáng bạc", weight: 17.6 }, { code: "A381-5680", name: "Màu đỏ đậm", weight: 3 }, { code: "A381-7400", name: "Màu đen đậm", weight: 0.9 }, { code: "A381-1832", name: "Màu bạc sáng mịn", weight: 17.5 } ] },
-    { brand: "Vinfast", paintSystem: "EZ", model: "VFe34", year: "2024", country: "Việt Nam", colorCode: "Xanh ngọc", colorName: "Xanh SM", components: [ { code: "A381-6531", name: "Màu trắng tinh", weight: 114 }, { code: "A381-2622", name: "Màu xanh dương nền đỏ", weight: 25.8 }, { code: "A381-2621", name: "Màu xanh dương nền ve", weight: 25.8 }, { code: "A381-0003", name: "Phụ gia tạo nền sáng bạc", weight: 25.8 }, { code: "A381-2619", name: "Màu xanh dương nền tím", weight: 2.6 } ] }
+     // TOYOTA
+    { brand: "Toyota", paintSystem: "EZ", model: "VIOS", year: "2024-2025", country: "Malaysia", colorCode: "4R0", colorName: "Vàng Cát", components: [ { code: "A381-1842", name: "Màu bạc thưa", weight: 6 }, { code: "A381-1835", name: "Màu bạc chiếu trắng", weight: 19 }, { code: "A381-4554", name: "Màu nâu đậm", weight: 0.9 }, { code: "A381-7400", name: "Màu đen đậm", weight: 0.5 }, { code: "A381-8565", name: "Màu vàng sáng trong", weight: 0.8 }, { code: "A381-5609", name: "Màu đỏ nền tím xanh", weight: 0.2 }, { code: "A381-5643", name: "Màu đỏ tươi", weight: 0.1 }, { code: "A381-0003", name: "Phụ gia tạo nền sáng bạc", weight: 1.5 }, { code: "A381-0089", name: "Phụ gia trong", weight: 2 }, { code: "A381-5608", name: "Màu đỏ marong đậm nền xanh cỏ", weight: 0.1 } ] }
 ];
 
 // --- HELPER FUNCTIONS ---
@@ -272,14 +306,12 @@ function updateFilterOptions() {
         const currentFilter = filters[i];
         const selectedValue = currentFilter.el.value;
         
-        // Populate current filter's options
         const options = [...new Set(filteredData.map(item => item[currentFilter.key]))].sort();
         currentFilter.el.innerHTML = `<option value="">${currentFilter.default}</option>`;
         options.forEach(opt => {
             currentFilter.el.innerHTML += `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt}</option>`;
         });
 
-        // Filter data for the next dropdown
         if (selectedValue) {
             filteredData = filteredData.filter(item => item[currentFilter.key] === selectedValue);
         }
@@ -319,12 +351,10 @@ function renderFormulas() {
     noResults.classList.toggle('hidden', filtered.length > 0);
 
     filtered.sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0)).forEach(formula => {
-        formula.imageUrl = 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
-
         const card = document.createElement('div');
         card.className = 'bg-white rounded-xl shadow-md overflow-hidden cursor-pointer hover:shadow-xl transition-shadow duration-300 flex flex-col';
         card.innerHTML = `
-            <img class="h-40 w-full object-cover" src="${formula.imageUrl || 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image'}" alt="Màu sơn">
+            <img class="h-40 w-full object-cover" src="${formula.imageUrl || PLACEHOLDER_IMG_URL}" alt="Màu sơn">
             <div class="p-4 flex-grow flex flex-col">
                 <p class="text-sm font-semibold text-blue-600">${formula.brand} - ${formula.year}</p>
                 <h3 class="font-bold text-lg text-gray-900 mt-1">${formula.model}</h3>
@@ -365,47 +395,42 @@ addComponentBtn.addEventListener('click', () => addComponentRow());
 formulaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     showLoading();
+    
+    try {
+        let imageUrl = document.getElementById('image-preview').src;
 
-    // let imageUrl = document.getElementById('image-preview').src || 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
-    let imageUrl = 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
-    if (newImageFile) {
-        const storageRef = ref(storage, `formulas/${Date.now()}_${newImageFile.name}`);
-        try {
+        if (newImageFile) {
+            const storageRef = ref(storage, `formulas/${Date.now()}_${newImageFile.name}`);
             const snapshot = await uploadBytes(storageRef, newImageFile);
             imageUrl = await getDownloadURL(snapshot.ref);
-        } catch (error) {
-            console.error("Image upload error:", error);
-            showToast("Lỗi tải ảnh lên.", true);
-            hideLoading();
-            return;
+        }else{
+            imageUrl = PLACEHOLDER_IMG_URL;
         }
-    }
 
-    const components = [];
-    document.querySelectorAll('.component-row').forEach(row => {
-        const code = row.querySelector('[data-field="code"]').value;
-        const name = row.querySelector('[data-field="name"]').value;
-        const weight = parseFloat(row.querySelector('[data-field="weight"]').value);
-        if (code && !isNaN(weight)) {
-            components.push({ code, name, weight });
-        }
-    });
+        const components = [];
+        document.querySelectorAll('.component-row').forEach(row => {
+            const code = row.querySelector('[data-field="code"]').value;
+            const name = row.querySelector('[data-field="name"]').value;
+            const weight = parseFloat(row.querySelector('[data-field="weight"]').value);
+            if (code && !isNaN(weight)) {
+                components.push({ code, name, weight });
+            }
+        });
 
-    const formulaData = {
-        brand: document.getElementById('brand').value,
-        model: document.getElementById('model').value,
-        year: document.getElementById('year').value,
-        country: document.getElementById('country').value,
-        colorCode: document.getElementById('color-code').value,
-        colorName: document.getElementById('color-name').value,
-        paintSystem: document.getElementById('paint-system').value,
-        components: components,
-        imageUrl: imageUrl || 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image',
-        updatedAt: serverTimestamp(),
-        lastUpdatedBy: currentUser.email
-    };
+        const formulaData = {
+            brand: document.getElementById('brand').value,
+            model: document.getElementById('model').value,
+            year: document.getElementById('year').value,
+            country: document.getElementById('country').value,
+            colorCode: document.getElementById('color-code').value,
+            colorName: document.getElementById('color-name').value,
+            paintSystem: document.getElementById('paint-system').value,
+            components: components,
+            imageUrl: imageUrl,
+            updatedAt: serverTimestamp(),
+            lastUpdatedBy: currentUser.email
+        };
 
-    try {
         if (currentFormulaId) {
             const formulaRef = doc(db, "formulas", currentFormulaId);
             await updateDoc(formulaRef, formulaData);
@@ -419,7 +444,11 @@ formulaForm.addEventListener('submit', async (e) => {
         closeAllModals();
     } catch (error) {
         console.error("Error saving formula:", error);
-        showToast("Lỗi lưu công thức.", true);
+         if (error.code === 'storage/unauthorized') {
+            showToast("Lỗi quyền truy cập: Không thể tải ảnh lên. Vui lòng kiểm tra lại Storage Rules.", true);
+        } else {
+            showToast("Lỗi khi lưu công thức.", true);
+        }
     } finally {
         hideLoading();
     }
@@ -427,12 +456,20 @@ formulaForm.addEventListener('submit', async (e) => {
 
 function showFormulaModal(id = null) {
     formulaForm.reset();
+    imagePreview.src = ""; // FIX: Explicitly clear src
+    imageUpload.value = null; // FIX: Reset file input
     imagePreview.classList.add('hidden');
     imagePlaceholder.classList.remove('hidden');
     componentsContainer.innerHTML = '';
     newImageFile = null;
     currentFormulaId = id;
-    
+    imageUpload.disabled = DISABLE_UPLOAD;
+    if(DISABLE_UPLOAD){
+        let txt = document.querySelector('label[for="image-upload"]>span');
+        if(txt){
+            txt.innerText = 'Tải ảnh lên (Chưa hỗ trợ)';
+        }
+    }
     if (id) {
         formulaFormTitle.textContent = "Chỉnh Sửa Công Thức";
         const formula = allFormulas.find(f => f.id === id);
@@ -445,8 +482,9 @@ function showFormulaModal(id = null) {
         document.getElementById('paint-system').value = formula.paintSystem;
         
         formula.components.forEach(c => addComponentRow(c));
+
         if (formula.imageUrl) {
-            imagePreview.src = formula.imageUrl || 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
+            imagePreview.src = formula.imageUrl;
             imagePreview.classList.remove('hidden');
             imagePlaceholder.classList.add('hidden');
         }
@@ -457,43 +495,35 @@ function showFormulaModal(id = null) {
     formulaFormModal.classList.remove('hidden');
 }
 
-// imageUpload.addEventListener('change', (e) => {
-//     const file = e.target.files[0];
-//     if (file) {
-//         newImageFile = file;
-//         const reader = new FileReader();
-//         reader.onload = (event) => {
-//             imagePreview.src = event.target.result;
-//             imagePreview.classList.remove('hidden');
-//             imagePlaceholder.classList.add('hidden');
-//         };
-//         reader.readAsDataURL(file);
-//     }
-// });
+imageUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        newImageFile = file;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            imagePreview.src = event.target.result;
+            imagePreview.classList.remove('hidden');
+            imagePlaceholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+});
 
 function showDetailsModal(id) {
     const formula = allFormulas.find(f => f.id === id);
     currentFormulaId = id;
+    originalComponents = JSON.parse(JSON.stringify(formula.components || [])); // Deep copy
+
     detailsTitle.textContent = `${formula.brand} ${formula.model} - ${formula.colorName}`;
     detailsPaintSystem.textContent = formula.paintSystem;
     detailsYear.textContent = formula.year;
     detailsCountry.textContent = formula.country || 'N/A';
-    detailsImage.src = formula.imageUrl || 'https://placehold.co/600x400/E2E8F0/4A5568?text=No+Image';
+    detailsImage.src = formula.imageUrl || '';
     detailsImage.style.display = formula.imageUrl ? 'block' : 'none';
     
-    detailsComponentsTable.innerHTML = '';
-    if (formula.components && formula.components.length > 0) {
-        formula.components.forEach(c => {
-            const row = document.createElement('tr');
-            row.className = 'border-b';
-            row.innerHTML = `
-                <td class="px-4 py-2 font-medium text-gray-900">${c.code}</td>
-                <td class="px-4 py-2">${c.name || 'N/A'}</td>
-                <td class="px-4 py-2 text-right">${c.weight}</td>
-            `;
-            detailsComponentsTable.appendChild(row);
-        });
-    }
+    recalculateMassInput.value = '';
+    renderComponentsTable(originalComponents, detailsOriginalComponentsTable, detailsOriginalTotalMass);
+    renderComponentsTable(originalComponents, detailsComponentsTable, detailsTotalMass);
 
     detailsMetadata.textContent = `Tạo bởi: ${formula.createdBy || 'N/A'} lúc ${formatDate(formula.createdAt)}. Sửa lần cuối: ${formatDate(formula.updatedAt)} bởi ${formula.lastUpdatedBy || 'N/A'}`;
 
@@ -516,6 +546,46 @@ function showDetailsModal(id) {
     detailsModal.classList.remove('hidden');
 }
 
+function renderComponentsTable(components, tableBody, totalMassEl) {
+    tableBody.innerHTML = '';
+    let totalMass = 0;
+    if (components && components.length > 0) {
+        components.forEach(c => {
+            const row = document.createElement('tr');
+            row.className = 'border-b';
+            row.innerHTML = `
+                <td class="px-4 py-2 font-medium text-gray-900">${c.code}</td>
+                <td class="px-4 py-2">${c.name || 'N/A'}</td>
+                <td class="px-4 py-2 text-right">${c.weight.toFixed(2)}</td>
+            `;
+            tableBody.appendChild(row);
+            totalMass += c.weight;
+        });
+    }
+    totalMassEl.textContent = totalMass.toFixed(2);
+}
+
+recalculateBtn.addEventListener('click', () => {
+    const newTotalMass = parseFloat(recalculateMassInput.value);
+    if (isNaN(newTotalMass) || newTotalMass <= 0) {
+        showToast("Vui lòng nhập tổng khối lượng hợp lệ.", true);
+        return;
+    }
+
+    const originalTotalMass = originalComponents.reduce((sum, c) => sum + c.weight, 0);
+    if (originalTotalMass === 0) return;
+
+    const recalculatedComponents = originalComponents.map(c => {
+        const ratio = c.weight / originalTotalMass;
+        return {
+            ...c,
+            weight: newTotalMass * ratio
+        };
+    });
+
+    renderComponentsTable(recalculatedComponents, detailsComponentsTable, detailsTotalMass);
+});
+
 function handleDeleteFormula(id) {
     confirmDeleteMessage.textContent = "Bạn có chắc chắn muốn xóa công thức này không? Hành động này không thể hoàn tác.";
     confirmDeleteModal.classList.remove('hidden');
@@ -523,15 +593,15 @@ function handleDeleteFormula(id) {
         showLoading();
         try {
             const formulaToDelete = allFormulas.find(f => f.id === id);
-            // if (formulaToDelete.imageUrl) {
-            //     try {
-            //         const imageRef = ref(storage, formulaToDelete.imageUrl);
-            //         await deleteObject(imageRef);
-            //     } catch (error) {
-            //         console.warn("Could not delete image from storage:", error.code);
-            //          if (error.code !== 'storage/object-not-found') throw error;
-            //     }
-            // }
+            if (formulaToDelete.imageUrl && !DISABLE_UPLOAD) {
+                try {
+                    const imageRef = ref(storage, formulaToDelete.imageUrl);
+                    await deleteObject(imageRef);
+                } catch (error) {
+                    console.warn("Could not delete image from storage:", error.code);
+                     if (error.code !== 'storage/object-not-found') throw error;
+                }
+            }
             await deleteDoc(doc(db, "formulas", id));
             showToast("Xóa công thức thành công!");
         } catch (error) {
